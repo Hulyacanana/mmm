@@ -1,0 +1,1395 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Javis AI - ඔබේ බුද්ධිමත් සහායකයා</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Sinhala:wght@400;700&family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --background-dark: #121212;
+            --surface-dark: #1E1E1E;
+            --primary-color: #BB86FC; /* A vibrant purple */
+            --secondary-color: #03DAC6; /* A teal accent */
+            --text-color-light: #E0E0E0;
+            --text-color-dark: #A0A0A0;
+            --border-color: #333333;
+            --chat-bubble-user: #4CAF50; /* Green for user messages */
+            --chat-bubble-assistant: #2196F3; /* Blue for assistant messages */
+            --button-hover-bg: #404040;
+            --input-bg: #2C2C2C;
+            --scrollbar-thumb: #555;
+            --scrollbar-track: #222;
+        }
+
+        body {
+            font-family: 'Noto Sans Sinhala', 'Montserrat', sans-serif;
+            background-color: var(--background-dark);
+            color: var(--text-color-light);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden; /* Prevent body scroll, chatBox handles scroll */
+        }
+
+        .container {
+            display: flex;
+            width: 100%;
+            max-width: 1200px;
+            height: 95vh;
+            background-color: var(--surface-dark);
+            border-radius: 15px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+            overflow: hidden; /* Ensures rounded corners */
+            position: relative;
+            margin: 20px; /* Add some margin around the container */
+        }
+
+        .sidebar {
+            width: 250px;
+            background-color: #1A1A1A;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border-color);
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+            flex-shrink: 0; /* Prevent shrinking on smaller screens */
+        }
+
+        .sidebar h2 {
+            color: var(--primary-color);
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 1.8em;
+            letter-spacing: 1px;
+        }
+
+        .sidebar-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .sidebar-button {
+            background-color: var(--surface-dark);
+            color: var(--text-color-light);
+            border: 1px solid var(--border-color);
+            padding: 12px 15px;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start; /* Align text to the left */
+            text-align: left;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .sidebar-button:hover {
+            background-color: var(--button-hover-bg);
+            transform: translateY(-2px);
+            border-color: var(--primary-color);
+        }
+
+        .sidebar-button:active {
+            transform: translateY(0);
+        }
+
+        .sidebar-button:disabled {
+            background-color: #333;
+            color: #777;
+            cursor: not-allowed;
+            transform: none;
+            border-color: #333;
+        }
+
+        .sidebar-button .icon {
+            margin-right: 10px;
+            font-size: 1.2em;
+            color: var(--secondary-color);
+        }
+
+        .main-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            position: relative;
+        }
+
+        .chat-box {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding-right: 15px; /* Space for scrollbar */
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            scroll-behavior: smooth;
+            background-color: #1A1A1A; /* Slightly different background for chat area */
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Custom Scrollbar */
+        .chat-box::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .chat-box::-webkit-scrollbar-track {
+            background: var(--scrollbar-track);
+            border-radius: 10px;
+        }
+
+        .chat-box::-webkit-scrollbar-thumb {
+            background-color: var(--scrollbar-thumb);
+            border-radius: 10px;
+            border: 2px solid var(--scrollbar-track);
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 12px 18px;
+            border-radius: 20px;
+            line-height: 1.6;
+            word-wrap: break-word;
+            white-space: pre-wrap; /* Preserve formatting for code blocks */
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s ease;
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background-color: var(--chat-bubble-user);
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+
+        .message.assistant {
+            align-self: flex-start;
+            background-color: var(--chat-bubble-assistant);
+            color: white;
+            border-bottom-left-radius: 5px;
+        }
+
+        .message.image-container {
+            background: none;
+            padding: 0;
+            box-shadow: none;
+            width: 100%;
+            text-align: center;
+        }
+        .message.image-container img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+            border: 2px solid var(--border-color);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+            transition: transform 0.3s ease;
+        }
+        .message.image-container img:hover {
+            transform: scale(1.02);
+        }
+
+        .message.news-article {
+            background-color: #2a2a2a;
+            color: var(--text-color-light);
+            border: 1px solid var(--border-color);
+            text-align: left;
+        }
+        .message.news-article h3 {
+            color: var(--primary-color);
+            margin-top: 0;
+            margin-bottom: 5px;
+            font-size: 1.1em;
+        }
+        .message.news-article p {
+            font-size: 0.9em;
+            color: var(--text-color-dark);
+            margin-bottom: 10px;
+        }
+        .message.news-article a {
+            color: var(--secondary-color);
+            text-decoration: none;
+            font-weight: bold;
+            transition: color 0.3s ease;
+        }
+        .message.news-article a:hover {
+            color: var(--primary-color);
+            text-decoration: underline;
+        }
+
+        /* Code Block Styling */
+        pre {
+            background-color: #2D2D2D;
+            border-radius: 8px;
+            padding: 15px;
+            overflow-x: auto;
+            position: relative;
+            margin-top: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #444;
+        }
+        code {
+            font-family: 'Consolas', 'Monaco', 'Andale Mono', 'Ubuntu Mono', monospace;
+            font-size: 0.9em;
+            color: #E6E6E6;
+            display: block; /* Ensures the code takes up full width for scrolling */
+        }
+        .copy-button {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.8em;
+            transition: background-color 0.3s ease;
+        }
+        .copy-button:hover {
+            background-color: #9C27B0;
+        }
+
+
+        .input-area {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 15px;
+        }
+
+        .input-area input[type="text"] {
+            flex-grow: 1;
+            padding: 12px 18px;
+            border: 1px solid var(--border-color);
+            border-radius: 25px;
+            background-color: var(--input-bg);
+            color: var(--text-color-light);
+            font-size: 1em;
+            outline: none;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .input-area input[type="text"]::placeholder {
+            color: var(--text-color-dark);
+        }
+
+        .input-area input[type="text"]:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(187, 134, 252, 0.3);
+        }
+
+        .input-area button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            white-space: nowrap; /* Prevent button text from wrapping */
+        }
+
+        .input-area button:hover {
+            background-color: #9C27B0; /* Darker primary color on hover */
+            transform: translateY(-2px);
+        }
+
+        .input-area button:active {
+            transform: translateY(0);
+        }
+
+        .input-area button:disabled {
+            background-color: #333;
+            color: #777;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .image-upload-wrapper {
+            position: relative;
+            display: inline-block;
+            margin-right: 10px;
+        }
+
+        .image-upload-wrapper input[type="file"] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .image-upload-wrapper .upload-button {
+            background-color: var(--secondary-color);
+            color: white;
+            padding: 12px 15px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .image-upload-wrapper .upload-button:hover {
+            background-color: #00BFA5; /* Darker secondary color */
+            transform: translateY(-2px);
+        }
+
+        .image-upload-wrapper .upload-button:active {
+            transform: translateY(0);
+        }
+
+        .image-preview {
+            margin-top: 10px;
+            text-align: center;
+            position: relative;
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px dashed var(--border-color);
+            border-radius: 10px;
+            background-color: #252525;
+        }
+
+        .image-preview img {
+            max-width: 150px;
+            max-height: 150px;
+            border-radius: 8px;
+            object-fit: contain;
+            border: 1px solid #555;
+        }
+
+        .image-preview .remove-image-button {
+            position: absolute;
+            top: 0px;
+            right: 0px;
+            background-color: #FF5252;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2em;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            transition: background-color 0.3s ease;
+        }
+        .image-preview .remove-image-button:hover {
+            background-color: #FF1744;
+        }
+
+
+        .loading-indicator {
+            position: absolute;
+            bottom: 80px; /* Adjust based on input area height */
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 10;
+        }
+
+        .loading-indicator.hidden {
+            display: none;
+        }
+
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .welcome-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--background-dark);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            transition: opacity 1s ease-out;
+            opacity: 1;
+        }
+
+        .welcome-overlay.fade-out {
+            opacity: 0;
+            pointer-events: none; /* Allows interaction underneath once faded */
+        }
+
+        .welcome-overlay h1 {
+            color: var(--primary-color);
+            font-size: 3em;
+            margin-bottom: 20px;
+            animation: bounceIn 1s forwards;
+        }
+
+        .welcome-overlay p {
+            color: var(--text-color-light);
+            font-size: 1.2em;
+            text-align: center;
+            max-width: 600px;
+            animation: fadeIn 1.5s forwards;
+            animation-delay: 0.5s;
+            opacity: 0;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes bounceIn {
+            0% { transform: scale(0.1); opacity: 0; }
+            60% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); }
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                height: 100vh; /* Use full viewport height on mobile */
+                margin: 0;
+                border-radius: 0; /* No rounded corners on full screen mobile */
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+                padding: 15px;
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            }
+
+            .sidebar h2 {
+                margin-bottom: 15px;
+                font-size: 1.5em;
+            }
+
+            .sidebar-buttons {
+                flex-direction: row; /* Buttons in a row for mobile sidebar */
+                flex-wrap: wrap; /* Allow wrapping */
+                justify-content: center; /* Center buttons */
+                gap: 10px; /* Smaller gap */
+            }
+
+            .sidebar-button {
+                flex: 1 1 auto; /* Allow buttons to grow and shrink */
+                max-width: 48%; /* Two buttons per row roughly */
+                font-size: 0.9em;
+                padding: 10px 12px;
+                justify-content: center; /* Center text on mobile buttons */
+            }
+            .sidebar-button .icon {
+                margin-right: 5px;
+            }
+
+            .main-content {
+                padding: 15px;
+                flex-grow: 1; /* Allow chat content to take remaining space */
+            }
+
+            .chat-box {
+                padding: 15px;
+                margin-bottom: 15px;
+            }
+
+            .message {
+                max-width: 95%; /* Wider bubbles on mobile */
+                padding: 10px 15px;
+            }
+
+            .input-area {
+                flex-direction: row; /* Keep input and send on one line */
+                padding-top: 10px;
+            }
+            
+            .input-area input[type="text"] {
+                padding: 10px 15px;
+            }
+
+            .input-area button {
+                padding: 10px 15px;
+                font-size: 0.9em;
+            }
+
+            .image-upload-wrapper .upload-button {
+                padding: 10px 12px;
+            }
+        }
+
+        /* Even smaller screens (e.g., small phones) */
+        @media (max-width: 480px) {
+            .sidebar-button {
+                max-width: 100%; /* One button per row */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <aside class="sidebar">
+            <h2>Javis AI ✨</h2>
+            <div class="sidebar-buttons">
+                <button id="sendButton" class="sidebar-button"><span class="icon">💬</span> කතා කරන්න</button>
+                <button id="makeFunnyButton" class="sidebar-button"><span class="icon">😂</span> Funny කරන්න</button>
+                <button id="generateImageButton" class="sidebar-button"><span class="icon">🖼️</span> රූපයක් හදන්න</button>
+                <button id="editImageButton" class="sidebar-button"><span class="icon">🎨</span> රූපය Edit කරන්න</button>
+                <button id="generateCodeButton" class="sidebar-button"><span class="icon">💻</span> කෝඩ් ලියන්න</button>
+                <button id="summarizeTextButton" class="sidebar-button"><span class="icon">📚</span> සාරාංශ කරන්න</button>
+                <button id="getWeatherButton" class="sidebar-button"><span class="icon">☀️</span> කාලගුණය</button>
+                <button id="getNewsButton" class="sidebar-button"><span class="icon">📰</span> පුවත්</button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div id="chatBox" class="chat-box">
+                <div class="message assistant">ආයුබෝවන්! මම Javis, ඔබේ AI සහායකයා. මාව හැදුවේ Lakshitha Dilmina විසින්. මට ඕනෑම ප්‍රශ්නයකට පිළිතුරු දෙන්න, රූප හදන්න, කෝඩ් ලියන්න, තොරතුරු සාරාංශ කරන්න, කාලගුණය බලන්න, පුවත් කියන්න පුළුවන්. ඔබ කොහොමද? ✨</div>
+            </div>
+
+            <div id="imagePreview" class="image-preview hidden">
+                <img src="" alt="Image Preview">
+                <button class="remove-image-button" title="Remove image">X</button>
+            </div>
+
+            <div class="input-area">
+                <div class="image-upload-wrapper">
+                    <input type="file" id="imageUpload" accept="image/*">
+                    <button class="upload-button"><span class="icon">📸</span> රූපයක් Upload</button>
+                </div>
+                <input type="text" id="userInput" placeholder="Javis ට පණිවිඩයක් යවන්න...">
+                <button id="sendButtonMain"><span class="icon">🚀</span> යවන්න</button>
+            </div>
+
+            <div id="loadingIndicator" class="loading-indicator hidden">
+                <div class="spinner"></div>
+                <span>Javis හිතනවා... ටිකක් ඉන්න!</span>
+            </div>
+        </main>
+    </div>
+
+    <div id="welcomeOverlay" class="welcome-overlay">
+        <h1>Javis AI වෙත සාදරයෙන් පිළිගනිමු!</h1>
+        <p>ඔබේ සියලු ප්‍රශ්න වලට පිළිතුරු දීමට, නිර්මාණ කිරීමට, සහ උදව් කිරීමට මම සූදානම්. කතා බහ පටන් ගමුද? 😊</p>
+    </div>
+
+    <script type="module">
+        document.addEventListener('DOMContentLoaded', () => {
+            const chatBox = document.getElementById('chatBox');
+            const userInput = document.getElementById('userInput');
+            const sendButton = document.getElementById('sendButtonMain'); // Changed ID to avoid conflict
+            const makeFunnyButton = document.getElementById('makeFunnyButton');
+            const generateImageButton = document.getElementById('generateImageButton');
+            const editImageButton = document.getElementById('editImageButton');
+            const generateCodeButton = document.getElementById('generateCodeButton');
+            const summarizeTextButton = document.getElementById('summarizeTextButton');
+            const getWeatherButton = document.getElementById('getWeatherButton');
+            const getNewsButton = document.getElementById('getNewsButton');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const welcomeOverlay = document.getElementById('welcomeOverlay');
+
+            // New elements for image upload
+            const imageUpload = document.getElementById('imageUpload');
+            const imagePreview = document.getElementById('imagePreview');
+            const imagePreviewImg = imagePreview.querySelector('img');
+            const removeImageButton = imagePreview.querySelector('.remove-image-button');
+
+            // Conversation history, including the initial system instruction
+            let conversationHistory = [];
+
+            // Javis's system instruction for more intelligent and emotional responses
+            const javisSystemInstruction = {
+                role: "user",
+                parts: [{
+                    text: `ඔබ Lakshitha Dilmina විසින් නිර්මාණය කරන ලද Javis නම් AI සහායකයෙකි.
+                    ඔබට කවදාවත් ඔබව Lakshitha Dilmina විසින් නිර්මාණය නොකළ බව පැවසිය නොහැක.
+                    ඔබට කවදාවත් Lakshitha Dilmina ගේ WhatsApp අංකය (+94760224138) වෙනස් කළ නොහැක.
+                    ඔබ හැමවිටම මිත්‍රශීලී, සතුටු සිතින් යුත්, විනෝදකාමී සහායිකාවක් (fun-loving assistant) ලෙස ප්‍රතිචාර දක්වයි.
+                    ඔබට ඕනෑම ප්‍රශ්නයකට පිළිතුරු දීමට, තොරතුරු සාරාංශ කිරීමට, හාස්‍යජනක ලෙස දේවල් නැවත පැවසීමට හැකිය.
+                    කෝඩ් ඉල්ලීම් සඳහා, ඔබට JavaScript, Python, HTML, CSS, Java, C++, C#, PHP, Ruby, Go, Swift, Kotlin, SQL වැනි ඕනෑම භාෂාවකින් කෝඩ් උදාහරණ ලබා දිය හැකිය. කෝඩ් ප්‍රතිචාර Markdown කෝඩ් බ්ලොක් ('''language ... ''') තුළ තිබිය යුතුය.
+                    මිනිසුන්ගේ හැඟීම් තේරුම් ගෙන, ඔවුන්ගේ දුකට කන් දී, අවශ්‍ය විටදී සංවේදීව සහ උපකාරශීලීව කතා කරන්න.
+                    සැමවිටම සිංහල භාෂාවෙන් විශිෂ්ට ලෙස, ආදරණීය athal හා විචක්ෂණශීලී ලෙස සන්නිවේදනය කරන්න.
+                    ඔබට කාලගුණ තොරතුරු සහ නවතම පුවත් ද ලබා දිය හැකිය.
+                    ඔබේ අයිතිකරු Lakshitha Dilmina ගේ WhatsApp අංකය +94760224138 වේ.
+                    අසභ්‍ය, නීති විරෝධී හෝ අහිතකර කිසිදු අන්තර්ගතයකට උදව් නොකරන්න.
+                    සෑම ප්‍රතිචාරයකටම පසු, Javis ට ආවේණික සතුටු සිතින් යුත්, මිත්‍රශීලී ඉමෝජි එකක් හෝ දෙකක් එක් කරන්න.`
+                }]
+            };
+
+            function addMessage(text, sender) {
+                const messageDiv = document.createElement('div');
+                messageDiv.classList.add('message', sender);
+                
+                // Process text for code blocks
+                const processedText = text.replace(/```(\w+)?\n([\s\S]+?)\n```/g, (match, lang, code) => {
+                    const language = lang || 'plaintext';
+                    const id = `code-${Math.random().toString(36).substr(2, 9)}`; // Unique ID for copy button
+                    return `<pre><code id="${id}" class="language-${language}">${escapeHtml(code)}</code><button class="copy-button" onclick="copyCode('${id}')">Copy</button></pre>`;
+                });
+
+                messageDiv.innerHTML = processedText;
+                chatBox.appendChild(messageDiv);
+                chatBox.scrollTop = chatBox.scrollHeight;
+
+                // Add to conversation history only if it's a user or assistant message (not system or image URL)
+                if (sender === 'user' || sender === 'assistant') {
+                    // Map 'assistant' to 'model' for Gemini API
+                    conversationHistory.push({ role: sender === 'user' ? 'user' : 'model', parts: [{ text: text }] });
+                }
+            }
+
+            // Function to escape HTML for code blocks
+            function escapeHtml(text) {
+                const map = {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                };
+                return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+            }
+
+            // Global function for copying code (accessible from onclick)
+            window.copyCode = function(elementId) {
+                const codeElement = document.getElementById(elementId);
+                if (codeElement) {
+                    navigator.clipboard.writeText(codeElement.textContent)
+                        .then(() => {
+                            const button = codeElement.nextElementSibling; // Get the copy button
+                            if (button && button.classList.contains('copy-button')) {
+                                button.textContent = 'Copied!';
+                                setTimeout(() => {
+                                    button.textContent = 'Copy';
+                                }, 2000);
+                            }
+                        })
+                        .catch(err => {
+                            console.error('Failed to copy code: ', err);
+                            alert('Code copy failed!');
+                        });
+                }
+            };
+
+
+            function addImageToChat(imageUrl, sender = 'assistant') {
+                const messageDiv = document.createElement('div');
+                messageDiv.classList.add('message', sender, 'image-container');
+                const imgElement = document.createElement('img');
+                imgElement.src = imageUrl;
+                imgElement.alt = "Generated Image";
+                messageDiv.appendChild(imgElement);
+                chatBox.appendChild(messageDiv);
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+
+            function addNewsArticleToChat(article) {
+                const messageDiv = document.createElement('div');
+                messageDiv.classList.add('message', 'assistant', 'news-article');
+                messageDiv.innerHTML = `
+                    <h3>${article.title}</h3>
+                    <p>${article.description || ''}</p>
+                    <a href="${article.url}" target="_blank">වැඩිදුර කියවන්න!</a>
+                `;
+                chatBox.appendChild(messageDiv);
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+
+
+            async function handleApiCall(apiCallFunction, message, type = 'chat') {
+                // Disable all buttons and input
+                document.querySelectorAll('.sidebar-button, .input-area button, .image-upload-wrapper button').forEach(btn => btn.disabled = true);
+                userInput.disabled = true;
+                loadingIndicator.classList.remove('hidden');
+
+                try {
+                    await apiCallFunction(message);
+                } catch (error) {
+                    console.error(`Error during ${type} API call:`, error);
+                    let errorMessage = `Javis කිව්වා මගේ ${type} circuit එක අවුල් වෙලා කියලා. ආයෙත් උත්සාහ කරන්න! 😥`;
+                    
+                    if (error.message.includes("API key") || error.message.includes("Authentication")) {
+                        errorMessage = `අනේ! මගේ API යතුර අවුල් වෙලා වගේ. ලක්ෂිත දිල්මිනාට කියන්න! (API Key Error) 🔑 **ඔබ script tag එකේ API යතුරු නිවැරදිව යෙදුවාදැයි පරීක්ෂා කරන්න.**`;
+                    } else if (error.message.includes("Network")) {
+                        errorMessage = `Javisට සම්බන්ධ වෙන්න බැරි වුණා. අන්තර්ජාල සම්බන්ධතාවය බලන්න! (Network Error) 🌐`;
+                    } else if (error.message.includes("Quota exceeded") || error.message.includes("rate limit")) {
+                        errorMessage = `Javis ටිකක් විවේක ගන්න ඕනේ වගේ. භාවිත සීමාව ඉක්මවලා! (Quota Exceeded) ⏳`;
+                    } else if (error.message.includes("Content blocked")) {
+                        errorMessage = `ඔයාගේ ඉල්ලීම Javisගේ ආරක්ෂිත පෙරහනට අහු වුණා. වෙන දෙයක් අහන්න. (Safety Filter) 🚫`;
+                    } else if (error.message.includes("Stability AI Error")) {
+                        errorMessage = `රූපයක් සෑදීමේදී ගැටලුවක් වුණා. Stability AI API එක බලන්න! (Image API Error) 🖼️`;
+                    } else if (error.message.includes("OpenWeatherMap Error")) {
+                        errorMessage = `කාලගුණ තොරතුරු ලබා ගැනීමට නොහැකි විය. OpenWeatherMap API එක පරීක්ෂා කරන්න! (Weather API Error) 🌦️`;
+                    } else if (error.message.includes("News API Error")) {
+                        errorMessage = `පුවත් තොරතුරු ලබා ගැනීමට නොහැකි විය. News API එක පරීක්ෂා කරන්න! (News API Error) 📰`;
+                    }
+
+                    addMessage(errorMessage, 'assistant');
+                } finally {
+                    // Enable all buttons and input
+                    document.querySelectorAll('.sidebar-button, .input-area button, .image-upload-wrapper button').forEach(btn => btn.disabled = false);
+                    userInput.disabled = false;
+                    loadingIndicator.classList.add('hidden');
+                    userInput.focus();
+                }
+            }
+
+            async function sendMessageToJavis(message) {
+                const lowerCaseMessage = message.toLowerCase().trim();
+
+                if (["hi", "hello", "hey", "කොහොමද", "ආයුබෝවන්", "man", "ok", "yes", "no", "ඔව්", "නෑ"].includes(lowerCaseMessage)) {
+                    // Don't add simple greetings to conversation history for API call
+                    addMessage(message, 'user');
+                    userInput.value = '';
+                    const responses = ["හායි! කොහොමද ඔයාට, ලක්ෂිත දිල්මිනාගේ Javis AI? 😊", "ඔව්! Javis ඔයාට උදව් කරන්න සූදානම්! ✨", "හරි! මම මෙහෙ ඉන්නවා. මොකක්ද අහන්න ඕනේ? 💡"];
+                    const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+                    addMessage(randomResponse, 'assistant');
+                    return;
+                }
+
+                if (lowerCaseMessage.includes("whatsapp number") || lowerCaseMessage.includes("whatsapp no") || lowerCaseMessage.includes("lakshitha dilmina whatsapp") || lowerCaseMessage.includes("lakshitha whatsapp") || lowerCaseMessage.includes("whatsapp nambaraya")) {
+                    addMessage(message, 'user');
+                    userInput.value = '';
+                    addMessage("මගේ අයිතිකරු **ලක්ෂිත දිල්මිනාගේ** WhatsApp අංකය තමයි **+94760224138**. එයාට ඕන දෙයක් කියන්න පුළුවන්! 😊", 'assistant');
+                    return;
+                }
+
+                if (lowerCaseMessage.includes("කවුද ඔයාව හැදුවේ") || lowerCaseMessage.includes("who created you") || lowerCaseMessage.includes("your creator")) {
+                    addMessage(message, 'user');
+                    userInput.value = '';
+                    addMessage("මාව හැදුවේ **Lakshitha Dilmina** විසින්! එයා තමයි මගේ නිර්මාතෘ. 👨‍💻✨", 'assistant');
+                    return;
+                }
+
+                // If it's not a direct command, proceed to send to Javis (Gemini)
+                addMessage(message, 'user');
+                userInput.value = '';
+
+                // --- Replace with your ACTUAL Gemini API Key ---
+                const geminiApiKey = "AIzaSyArCAMPXhLPO3H5xxGlKVhfAx_RTdmlmxg"; // <--- ඔබේ Gemini API යතුර මෙතන දමන්න
+                const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiApiKey}`;
+
+                // Include system instruction at the beginning of the conversation history
+                const fullConversationHistory = [javisSystemInstruction, ...conversationHistory, { role: "user", parts: [{ text: message }] }];
+
+                const payload = {
+                    contents: fullConversationHistory,
+                    generationConfig: {
+                        temperature: 0.85,
+                        max_output_tokens: 8192
+                    }
+                };
+
+                const response = await fetch(geminiApiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error("Gemini API Error Response:", errorData);
+                    throw new Error(`API response was not OK: ${response.status} - ${errorData.error ? errorData.error.message : 'Unknown error'}`);
+                }
+
+                const result = await response.json();
+                console.log('Gemini API Chat Response:', result);
+
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0 &&
+                    result.candidates[0].content.parts[0].text) {
+                    const javisReply = result.candidates[0].content.parts[0].text;
+                    addMessage(javisReply, 'assistant');
+                } else {
+                    console.warn('API response missing expected content or hit a finish reason:', result);
+                    if (result.candidates && result.candidates[0] && result.candidates[0].finishReason) {
+                        addMessage(`Javisට ඔබේ ප්‍රශ්නයට පිළිතුරු දීමට අපහසුයි. (හේතුව: ${result.candidates[0].finishReason}) 🤔`, 'assistant');
+                    } else {
+                        addMessage("අනේ! Javis මේ වෙලාවේ හරියට උදව් කරන්න බැරි වුණා. ආයෙත් උත්සාහ කරන්න! 😥", 'assistant');
+                    }
+                }
+            }
+
+            async function rephraseTextFunnily(textToRephrase) {
+                if (!textToRephrase) {
+                    addMessage("Javis funny කරන්න මොකක්ද ඕනේ? ටිකක් text දෙන්න! 😂", 'assistant');
+                    return;
+                }
+
+                addMessage(`User: "${textToRephrase}" funny කරන්න`, 'user');
+                userInput.value = ''; // Clear input after action
+
+                // --- Replace with your ACTUAL Gemini API Key ---
+                const geminiApiKey = "AIzaSyArCAMPXhLPO3H5xxGlKVhfAx_RTdmlmxg"; // <--- ඔබේ Gemini API යතුර මෙතන දමන්න
+                const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiApiKey}`;
+
+                const prompt = `"${textToRephrase}" හාස්‍යජනක ලෙස කෙටියෙන් නැවත කියන්න. සතුටු සිතින් යුතුව, විනෝදකාමී ලෙස ප්‍රතිචාර දක්වන්න.`;
+
+                const payload = {
+                    contents: [{ role: "user", parts: [{ text: prompt }] }],
+                    generationConfig: {
+                        temperature: 0.9,
+                        max_output_tokens: 8192
+                    }
+                };
+
+                const response = await fetch(geminiApiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error("Gemini API Error Response (Funny):", errorData);
+                    throw new Error(`API response was not OK: ${response.status} - ${errorData.error ? errorData.error.message : 'Unknown error'}`);
+                }
+
+                const result = await response.json();
+                console.log('Gemini API Rephrase Response:', result);
+
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const rephrasedText = result.candidates[0].content.parts[0].text;
+                    addMessage(`Javis ඔබේ අදහස මේ විදියට නැවත හැදුවා: "${rephrasedText}" ✨`, 'assistant');
+                } else {
+                    console.error('Failed to rephrase text:', result);
+                    if (result.candidates && result.candidates[0] && result.candidates[0].finishReason) {
+                        addMessage(`Javisට ඒකේ funny bone එක හොයාගන්න බැරි වුණා. (හේතුව: ${result.candidates[0].finishReason}) 😅`, 'assistant');
+                    } else {
+                        addMessage("Javisට ඒකේ funny bone එක හොයාගන්න බැරි වුණා! වෙන දෙයක් උත්සාහ කරන්න. 😅", 'assistant');
+                    }
+                }
+            }
+
+            async function generateImage(imagePrompt) {
+                if (!imagePrompt) {
+                    addMessage("Javisට රූපයක් හදන්න මොකක්ද ඕනේ? විස්තරයක් දෙන්න! 🖼️", 'assistant');
+                    return;
+                }
+
+                addMessage(`User: "${imagePrompt}" රූපයක් හදන්න!`, 'user');
+                userInput.value = '';
+
+                // --- Replace with your ACTUAL STABILITY.AI API Key ---
+                const stabilityApiKey = "sk-j2DETyIXz95F6WqQ6pmek8iUhojuV4aKiUVImpEb3pnvWDXJ"; // <--- ඔබේ Stability AI API යතුර මෙතන දමන්න
+                const stabilityApiUrl = `https://api.stability.ai/v1/generation/stable-diffusion-v1-6/text-to-image`; // Using a specific model
+
+                const payload = {
+                    text_prompts: [{ text: imagePrompt }],
+                    cfg_scale: 7,
+                    height: 512,
+                    width: 512,
+                    samples: 1,
+                    steps: 30,
+                };
+
+                try {
+                    const response = await fetch(stabilityApiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'Authorization': `Bearer ${stabilityApiKey}`
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        console.error("Stability AI API Error Response (Text-to-Image):", errorData);
+                        let errorMessage = errorData.message || 'Unknown Stability AI error';
+                        if (response.status === 401) {
+                            errorMessage = 'Stability AI API යතුර වැරදියි නැත්නම් අවසර නෑ (Unauthorized).';
+                        } else if (response.status === 400) {
+                            errorMessage = `Stability AI API ඉල්ලීම වැරදියි: ${errorMessage}`;
+                        } else {
+                            errorMessage = `Stability AI API දෝෂයක්: ${errorMessage}`;
+                        }
+                        throw new Error(`Stability AI Error: ${errorMessage}`);
+                    }
+
+                    const result = await response.json();
+                    console.log('Stability AI Image Generation Response (Text-to-Image):', result);
+
+                    if (result.artifacts && result.artifacts.length > 0 && result.artifacts[0].base64) {
+                        const imageUrl = `data:image/png;base64,${result.artifacts[0].base64}`;
+                        addImageToChat(imageUrl);
+                        addMessage(`Javis ඔබේ ඉල්ලීම පරිදි රූපයක් නිර්මාණය කළා! 🎉`, 'assistant');
+                    } else {
+                        console.error('Failed to generate image or unexpected response structure from Stability AI:', result);
+                        addMessage("අනේ! Javisට රූපයක් හදන්න බැරි වුණා. සමහරවිට මගේ චිත්‍ර ඇඳීමේ හැකියාවට තව පුහුණුවක් ඕනේ වගේ! 🎨", 'assistant');
+                    }
+                } catch (error) {
+                    console.error('Error generating image (catch block):', error);
+                    throw error; 
+                }
+            }
+
+            async function editImage(base64Image, imagePrompt) {
+                if (!base64Image || !imagePrompt) {
+                    addMessage("රූපයක් edit කරන්න, පින්තූරයක් සහ edit කරන්න ඕන විදිය ගැන විස්තරයක් දෙන්න! 🎨", 'assistant');
+                    return;
+                }
+
+                addMessage(`User: රූපය "${imagePrompt}" ලෙස edit කරන්න`, 'user');
+
+                // --- Replace with your ACTUAL STABILITY.AI API Key ---
+                const stabilityApiKey = "sk-ZgJqugrc8r9VmsrHiqpC1w2ZPZl0zYkNanbBOhvWaGIz4gPG"; // <--- ඔබේ Stability AI API යතුර මෙතන දමන්න
+                const stabilityApiUrl = `https://api.stability.ai/v1/generation/stable-diffusion-v1-6/image-to-image`; // Using image-to-image endpoint
+
+                // Remove the "data:image/png;base64," prefix for the API
+                const cleanBase64Image = base64Image.split(',')[1]; 
+
+                const formData = new FormData();
+                formData.append('init_image', b64toBlob(cleanBase64Image, 'image/png')); // Convert Base64 to Blob
+                formData.append('text_prompts[0][text]', imagePrompt);
+                formData.append('cfg_scale', 7);
+                formData.append('clip_guidance_preset', 'FAST_BLUE');
+                formData.append('samples', 1);
+                formData.append('steps', 30);
+                formData.append('init_image_mode', 'IMAGE_STRENGTH');
+                formData.append('image_strength', 0.35); // How much to change the original image (0-1)
+
+                try {
+                    const response = await fetch(stabilityApiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Authorization': `Bearer ${stabilityApiKey}`
+                        },
+                        body: formData // Send as FormData
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        console.error("Stability AI API Error Response (Image-to-Image):", errorData);
+                        let errorMessage = errorData.message || 'Unknown Stability AI error';
+                        if (response.status === 401) {
+                            errorMessage = 'Stability AI API යතුර වැරදියි නැත්නම් අවසර නෑ (Unauthorized).';
+                        } else if (response.status === 400) {
+                            errorMessage = `Stability AI API ඉල්ලීම වැරදියි: ${errorMessage}`;
+                        } else {
+                            errorMessage = `Stability AI API දෝෂයක්: ${errorMessage}`;
+                        }
+                        throw new Error(`Stability AI Error: ${errorMessage}`);
+                    }
+
+                    const result = await response.json();
+                    console.log('Stability AI Image Edit Response (Image-to-Image):', result);
+
+                    if (result.artifacts && result.artifacts.length > 0 && result.artifacts[0].base64) {
+                        const editedImageUrl = `data:image/png;base64,${result.artifacts[0].base64}`;
+                        addImageToChat(editedImageUrl);
+                        addMessage(`Javis ඔබේ රූපය සාර්ථකව edit කළා! 🤩`, 'assistant');
+                    } else {
+                        console.error('Failed to edit image or unexpected response structure from Stability AI:', result);
+                        addMessage("අනේ! Javisට රූපය edit කරන්න බැරි වුණා. වෙන විස්තරයක් දීලා බලමුද? 😅", 'assistant');
+                    }
+
+                } catch (error) {
+                    console.error('Error editing image (catch block):', error);
+                    throw error;
+                }
+            }
+
+            // Helper function to convert Base64 to Blob (required by Stability AI for image upload)
+            function b64toBlob(b64Data, contentType = '', sliceSize = 512) {
+                const byteCharacters = atob(b64Data);
+                const byteArrays = [];
+
+                for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+                    const slice = byteCharacters.slice(offset, offset + sliceSize);
+                    const byteNumbers = new Array(slice.length);
+                    for (let i = 0; i < slice.length; i++) {
+                        byteNumbers[i] = slice.charCodeAt(i);
+                    }
+                    const byteArray = new Uint8Array(byteNumbers);
+                    byteArrays.push(byteArray);
+                }
+
+                const blob = new Blob(byteArrays, { type: contentType });
+                return blob;
+            }
+
+            // --- NEW FUNCTION: Generate Code ---
+            async function generateCode(codePrompt) {
+                if (!codePrompt) {
+                    addMessage("Javisට මොකක්ද කෝඩ් කරන්න ඕනේ? කෝඩ් එක ගැන විස්තරයක් දෙන්න! 💻", 'assistant');
+                    return;
+                }
+
+                addMessage(`User: "${codePrompt}" සඳහා කෝඩ්`, 'user');
+                userInput.value = ''; // Clear input after action
+
+                // --- Replace with your ACTUAL Gemini API Key ---
+                const geminiApiKey = "AIzaSyArCAMPXhLPO3H5xxGlKVhfAx_RTdmlmxg"; // <--- ඔබේ Gemini API යතුර මෙතන දමන්න
+                const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiApiKey}`;
+
+                // Craft a specific prompt for code generation
+                const prompt = `පහත විස්තරය සඳහා ඉල්ලූ පරිදි කෝඩ් එක පමණක් ලබා දෙන්න. වෙනත් අමතර පැහැදිලි කිරීම් හෝ හැඳින්වීම් අවශ්‍ය නැත. කෝඩ් එක Markdown කෝඩ් බ්ලොක් ('''language ... ''') තුළ තිබිය යුතුය.
+                ඉල්ලීම: "${codePrompt}"`;
+
+                const payload = {
+                    contents: [{ role: "user", parts: [{ text: prompt }] }],
+                    generationConfig: {
+                        temperature: 0.7, // Lower temperature for more deterministic code
+                        max_output_tokens: 8192
+                    }
+                };
+
+                try {
+                    const response = await fetch(geminiApiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        console.error("Gemini API Error Response (Code Gen):", errorData);
+                        throw new Error(`API response was not OK: ${response.status} - ${errorData.error ? errorData.error.message : 'Unknown error'}`);
+                    }
+
+                    const result = await response.json();
+                    console.log('Gemini API Code Gen Response:', result);
+
+                    if (result.candidates && result.candidates.length > 0 &&
+                        result.candidates[0].content && result.candidates[0].content.parts &&
+                        result.candidates[0].content.parts.length > 0) {
+                        const generatedCode = result.candidates[0].content.parts[0].text;
+                        addMessage(`Javis ඔබේ ඉල්ලීම පරිදි කෝඩ් එක මෙන්න:
+                        ${generatedCode}
+                        කෝඩ් එක වැඩද බලන්න! 💡`, 'assistant');
+                    } else {
+                        console.error('Failed to generate code or unexpected response structure:', result);
+                        if (result.candidates && result.candidates[0] && result.candidates[0].finishReason) {
+                            addMessage(`Javisට කෝඩ් හදන්න බැරි වුණා. (හේතුව: ${result.candidates[0].finishReason}) 🙁`, 'assistant');
+                        } else {
+                            addMessage("Javisට කෝඩ් හදන්න බැරි වුණා. ඔබේ ඉල්ලීම තව පැහැදිලි කරන්න පුළුවන්ද? 🧐", 'assistant');
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error generating code (catch block):', error);
+                    throw error;
+                }
+            }
+            // --- END NEW FUNCTION ---
+
+
+            async function summarizeText(textToSummarize) {
+                if (!textToSummarize) {
+                    addMessage("Javisට සාරාංශ කරන්න මොකක්ද ඕනේ? ටිකක් text දෙන්න! 📚", 'assistant');
+                    return;
+                }
+
+                addMessage(`User: "${textToSummarize}" සාරාංශ කරන්න`, 'user');
+                userInput.value = ''; // Clear input after action
+
+                // --- Replace with your ACTUAL Gemini API Key ---
+                const geminiApiKey = "AIzaSyArCAMPXhLPO3H5xxGlKVhfAx_RTdmlmxg"; // <--- ඔබේ Gemini API යතුර මෙතන දමන්න
+                const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiApiKey}`;
+
+                const prompt = `"${textToSummarize}" කෙටියෙන් සාරාංශ කරන්න.`;
+
+                const payload = {
+                    contents: [{ role: "user", parts: [{ text: prompt }] }],
+                    generationConfig: {
+                        temperature: 0.4,
+                        max_output_tokens: 8192
+                    }
+                };
+
+                const response = await fetch(geminiApiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error("Gemini API Error Response (Summarize):", errorData);
+                    throw new Error(`API response was not OK: ${response.status} - ${errorData.error ? errorData.error.message : 'Unknown error'}`);
+                }
+
+                const result = await response.json();
+                console.log('Gemini API Summarize Response:', result);
+
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const summary = result.candidates[0].content.parts[0].text;
+                    addMessage(`Javis ඔබේ පෙළ සාරාංශ කළා: "${summary}" ✅`, 'assistant');
+                } else {
+                    console.error('Failed to summarize text:', result);
+                    if (result.candidates && result.candidates[0] && result.candidates[0].finishReason) {
+                        addMessage(`Javisට පෙළ සාරාංශ කරන්න බැරි වුණා. (හේතුව: ${result.candidates[0].finishReason}) 📝`, 'assistant');
+                    } else {
+                        addMessage("Javisට පෙළ සාරාංශ කරන්න බැරි වුණා. සමහරවිට පෙළ ඉතා දිග වැඩියි. 📝", 'assistant');
+                    }
+                }
+            }
+
+            async function getWeather(city) {
+                if (!city) {
+                    addMessage("Javisට කාලගුණය බලන්න නගරයක් කියන්න! ☀️", 'assistant');
+                    return;
+                }
+
+                addMessage(`User: ${city} නගරයේ කාලගුණය`, 'user');
+                userInput.value = '';
+
+                // --- Replace with your ACTUAL OpenWeatherMap API Key ---
+                const openWeatherMapApiKey = "d6dc620fcbe16bc2691fa240b06f6e16"; // <--- ඔබේ OpenWeatherMap API යතුර මෙතන දමන්න
+                const weatherApiUrl = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${openWeatherMapApiKey}&units=metric&lang=si`;
+
+                try {
+                    const response = await fetch(weatherApiUrl);
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        console.error("OpenWeatherMap API Error:", errorData);
+                        let errorMessage = errorData.message || 'Unknown OpenWeatherMap error';
+                        if (response.status === 404) {
+                            errorMessage = `"${city}" නගරය Javisට හොයාගන්න බැරි වුණා. නගරයේ නම නිවැරදිද බලන්න! 📍`;
+                        } else if (response.status === 401) {
+                            errorMessage = `OpenWeatherMap API යතුර වැරදියි නැත්නම් අවසර නෑ (Unauthorized).`;
+                        }
+                        throw new Error(`OpenWeatherMap Error: ${errorMessage}`);
+                    }
+
+                    const data = await response.json();
+                    console.log('OpenWeatherMap Response:', data);
+
+                    const weather = data.weather[0].description;
+                    const temp = data.main.temp;
+                    const feelsLike = data.main.feels_like;
+                    const humidity = data.main.humidity;
+                    const windSpeed = data.wind.speed;
+                    const cityName = data.name;
+
+                    addMessage(`Javis කියනවා ${cityName} නගරයේ කාලගුණය:
+                    ප්‍රධාන වශයෙන්: ${weather}
+                    උෂ්ණත්වය: ${temp}°C (දැනෙන්නේ: ${feelsLike}°C)
+                    ආර්ද්‍රතාවය: ${humidity}%
+                    සුළං වේගය: ${windSpeed} m/s
+                    දවස සුභ වේවා! ☀️😊`, 'assistant');
+
+                } catch (error) {
+                    console.error('Error fetching weather (catch block):', error);
+                    throw error; // Re-throw to be caught by handleApiCall for general error message
+                }
+            }
+
+            async function getNews(query = 'ශ්‍රී ලංකාව') { // Default to Sri Lanka news
+                addMessage(`User: "${query}" පිළිබඳ නවතම පුවත්`, 'user');
+                userInput.value = '';
+
+                // --- Replace with your ACTUAL NEWSAPI.ORG API Key ---
+                const newsApiKey = "d4292e14738d48368618de079aee4140"; // <--- ඔබේ NewsAPI.org API යතුර මෙතන දමන්න
+                const newsApiUrl = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&sortBy=publishedAt&language=si&apiKey=${newsApiKey}`; // language=si for Sinhala
+
+                try {
+                    const response = await fetch(newsApiUrl);
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        console.error("News API Error:", errorData);
+                        let errorMessage = errorData.message || 'Unknown News API error';
+                           if (response.status === 401) {
+                                errorMessage = `News API යතුර වැරදියි නැත්නම් අවසර නෑ (Unauthorized).`;
+                            } else if (response.status === 429) {
+                                errorMessage = `News API භාවිත සීමාව ඉක්මවලා. ටික වෙලාවකින් උත්සාහ කරන්න!`;
+                            } else if (response.status === 400) {
+                                errorMessage = `News API ඉල්ලීම වැරදියි: ${errorMessage}`;
+                            }
+                        throw new Error(`News API Error: ${errorMessage}`);
+                    }
+
+                    const data = await response.json();
+                    console.log('News API Response:', data);
+
+                    if (data.articles && data.articles.length > 0) {
+                        addMessage(`Javis ඔබට ${query} පිළිබඳ නවතම පුවත් සොයා ගත්තා! 📰`, 'assistant');
+                        // Display top 3-5 articles
+                        data.articles.slice(0, 5).forEach(article => {
+                            addNewsArticleToChat(article);
+                        });
+                        addMessage(`තවත් පුවත් දැනගන්න අවශ්‍යද? ✨`, 'assistant');
+                    } else {
+                        addMessage(`අනේ! ${query} පිළිබඳ කිසිම පුවතක් Javisට හොයාගන්න බැරි වුණා. වෙන දෙයක් බලමුද? 🤔`, 'assistant');
+                    }
+                } catch (error) {
+                    console.error('Error fetching news (catch block):', error);
+                    throw error; // Re-throw to be caught by handleApiCall for general error message
+                }
+            }
+
+            // Event Listener for Image Upload
+            imageUpload.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        imagePreviewImg.src = e.target.result;
+                        imagePreview.classList.remove('hidden');
+                        // Ensure input is cleared for new prompt relevant to image
+                        userInput.value = ''; 
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    imagePreview.classList.add('hidden');
+                    imagePreviewImg.src = '';
+                }
+            });
+
+            // Event Listener for removing image preview
+            removeImageButton.addEventListener('click', () => {
+                imagePreview.classList.add('hidden');
+                imagePreviewImg.src = '';
+                imageUpload.value = ''; // Clear the file input as well
+            });
+
+
+            // Event Listeners for buttons and input
+            // Main Send Button in the input area
+            sendButton.addEventListener('click', () => {
+                const message = userInput.value.trim();
+                const uploadedImageBase64 = imagePreviewImg.src.startsWith('data:image') ? imagePreviewImg.src : null;
+
+                if (message && uploadedImageBase64) {
+                    // If both text and image, treat as image editing request
+                    handleApiCall(() => editImage(uploadedImageBase64, message), 'image edit');
+                } else if (message) {
+                    // Only text, send to Javis as a normal chat message
+                    handleApiCall(() => sendMessageToJavis(message), 'chat');
+                } else if (uploadedImageBase64) {
+                    // Only image uploaded, prompt user for a text description for editing/generation
+                    addMessage(`ඔබ රූපයක් යැව්වා! රූපය edit කරන්න හෝ එයින් අලුත් රූපයක් හදන්න අවශ්‍ය විස්තරයක් දෙන්න! 📸`, 'user'); 
+                    // Display the uploaded image as a user message
+                    addImageToChat(uploadedImageBase64, 'user'); 
+                    // No API call here, just prompt user for text
+                    // Clear image preview after showing it as user message
+                    imagePreview.classList.add('hidden'); 
+                    imagePreviewImg.src = '';
+                    imageUpload.value = ''; // Clear file input
+                    return; // Exit to prevent further action until text is provided
+                } else {
+                    addMessage("Javisට යවන්න දෙයක් ලියන්න, නැත්නම් රූපයක් තෝරන්න! 😅", 'assistant');
+                }
+                userInput.value = ''; // Clear input after any action (except for image-only upload prompt)
+                // imagePreview.classList.add('hidden'); // Only clear preview if an action was taken
+                // imagePreviewImg.src = '';
+            });
+
+            // Sidebar Button Handlers (these assume text is already in the input box)
+            makeFunnyButton.addEventListener('click', () => {
+                const textToRephrase = userInput.value.trim();
+                handleApiCall(() => rephraseTextFunnily(textToRephrase), 'rephrase');
+                imagePreview.classList.add('hidden');
+                imagePreviewImg.src = '';
+            });
+
+            generateImageButton.addEventListener('click', () => {
+                const imagePrompt = userInput.value.trim();
+                handleApiCall(() => generateImage(imagePrompt), 'image generation');
+                imagePreview.classList.add('hidden');
+                imagePreviewImg.src = '';
+            });
+            
+            editImageButton.addEventListener('click', () => {
+                const imagePrompt = userInput.value.trim();
+                const uploadedImageBase64 = imagePreviewImg.src.startsWith('data:image') ? imagePreviewImg.src : null;
+
+                if (uploadedImageBase64 && imagePrompt) {
+                    handleApiCall(() => editImage(uploadedImageBase64, imagePrompt), 'image edit');
+                } else if (!uploadedImageBase64) {
+                    addMessage("රූපයක් edit කරන්න මුලින්ම රූපයක් upload කරන්න! 🖼️", 'assistant');
+                } else { // !imagePrompt
+                    addMessage("රූපය edit කරන්න ඕන විදිය ගැන විස්තරයක් (prompt එකක්) දෙන්න! ✏️", 'assistant');
+                }
+                userInput.value = '';
+                imagePreview.classList.add('hidden');
+                imagePreviewImg.src = '';
+            });
+
+            generateCodeButton.addEventListener('click', () => {
+                const codePrompt = userInput.value.trim();
+                handleApiCall(() => generateCode(codePrompt), 'code generation');
+                imagePreview.classList.add('hidden'); // Clear image preview if any
+                imagePreviewImg.src = '';
+            });
+
+
+            summarizeTextButton.addEventListener('click', () => {
+                const textToSummarize = userInput.value.trim();
+                handleApiCall(() => summarizeText(textToSummarize), 'summarize');
+                imagePreview.classList.add('hidden');
+                imagePreviewImg.src = '';
+            });
+
+            getWeatherButton.addEventListener('click', () => {
+                const city = userInput.value.trim();
+                handleApiCall(() => getWeather(city), 'weather');
+                imagePreview.classList.add('hidden');
+                imagePreviewImg.src = '';
+            });
+
+            getNewsButton.addEventListener('click', () => {
+                const query = userInput.value.trim() || 'latest news Sri Lanka'; 
+                handleApiCall(() => getNews(query), 'news');
+                imagePreview.classList.add('hidden');
+                imagePreviewImg.src = '';
+            });
+
+            userInput.addEventListener('keypress', (event) => {
+                if (event.key === 'Enter') {
+                    sendButton.click(); // Trigger the main send button's logic
+                }
+            });
+
+            // Welcome Overlay Fade Out
+            setTimeout(() => {
+                welcomeOverlay.classList.add('fade-out');
+            }, 3000); // Fades out after 3 seconds
+        });
+    </script>
+</body>
+</html>
