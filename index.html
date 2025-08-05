@@ -524,11 +524,16 @@
             .main-content {
                 padding: 15px;
                 flex-grow: 1; /* Allow chat content to take remaining space */
+                /* Fix for mobile chat bar not showing */
+                display: flex;
+                flex-direction: column;
             }
 
             .chat-box {
                 padding: 15px;
                 margin-bottom: 15px;
+                flex-grow: 1;
+                height: auto;
             }
 
             .message {
@@ -539,8 +544,22 @@
             .input-area {
                 flex-direction: row; /* Keep input and send on one line */
                 padding-top: 10px;
+                position: fixed; /* Fix the input bar at the bottom */
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                background-color: var(--surface-dark); /* Add background to cover content */
+                border-top: 1px solid var(--border-color);
+                padding: 15px;
+                box-sizing: border-box; /* Ensure padding is included in width */
+                z-index: 10;
             }
             
+            /* Add padding to the bottom of the chat box to prevent content from being hidden by the input bar */
+            .chat-box {
+                padding-bottom: 100px; /* Adjust this value based on the height of your input bar */
+            }
+
             .input-area input[type="text"] {
                 padding: 10px 15px;
             }
